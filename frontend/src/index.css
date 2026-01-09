@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@theme {
+  --font-sans: 'Inter', sans-serif;
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-blue-50: #eff6ff;
+  --color-blue-100: #dbeafe;
+  --color-blue-500: #3b82f6;
+  --color-blue-600: #2563eb;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f3f4f6;
+}
+
+/* Custom utility classes using @apply need to be in a layer in v4 too, but syntax is slightly different or same. 
+   In v4, @apply works, but @layer components might need @utility.
+   Let's keep it simple for now and rely on standard classes where possible.
+   I will remove the @layer components block and inline the styles or use standard utilities to avoid complexity if v4 is strict.
+   Actually, let's try to keep the @layer but use standard CSS nesting if supported or just standard classes.
+*/
+
+.card {
+  @apply bg-white rounded-xl shadow-sm border border-gray-100 transition-all duration-300 hover:shadow-md;
+}
+
+.btn-primary {
+  @apply bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5;
+}
+
+.input-field {
+  @apply w-full p-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200 bg-gray-50 focus:bg-white;
+}

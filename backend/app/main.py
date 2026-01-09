@@ -1,0 +1,35 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI(title="Customer Segmentation DSS", version="1.0.0")
+
+# CORS
+origins = [
+    "http://localhost:5173",  # Vite default
+    "http://localhost:3000",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+from app.api import upload, clustering, analytics, strategy, auth
+from app.core.database import engine, Base
+from app.models import models
+from app.models.user import User
+
+Base.metadata.create_all(bind=engine)
+
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
+app.include_router(upload.router, prefix="/api/v1", tags=["upload"])
+app.include_router(clustering.router, prefix="/api/v1", tags=["clustering"])
+app.include_router(analytics.router, prefix="/api/v1", tags=["analytics"])
+app.include_router(strategy.router, prefix="/api/v1", tags=["strategy"])
+
+@app.get("/")
+def read_root():
+    return {"message": "Welcome to Customer Segmentation DSS API"}
