@@ -21,6 +21,11 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
+class UserUpdate(BaseModel):
+    full_name: str
+    password: str = None
+
+
 class UserResponse(BaseModel):
     id: int
     email: str
@@ -83,4 +88,15 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
 
 @router.get("/me", response_model=UserResponse)
 def read_users_me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+@router.put("/me", response_model=UserResponse)
+def update_user_me(user_update: UserUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    current_user.full_name = user_update.full_name
+    if user_update.password:
+        current_user.hashed_password = get_password_hash(user_update.password)
+    
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
     return current_user

@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import FileUpload from '../components/FileUpload';
 import { getDataQuality } from '../services/api';
-import { FileText, CheckCircle, AlertTriangle, Database, Calendar, DollarSign, Users } from 'lucide-react';
+import { FileText, CheckCircle, AlertTriangle, Database, Calendar, DollarSign, Users, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const UploadPage = () => {
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [uploadComplete, setUploadComplete] = useState(false);
+    const navigate = useNavigate();
 
     const fetchStats = async () => {
         setLoading(true);
@@ -25,21 +28,25 @@ const UploadPage = () => {
 
     const handleUploadSuccess = () => {
         fetchStats();
+        setUploadComplete(true);
     };
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 pb-10">
             <div className="flex items-center justify-between">
                 <div>
                     <h2 className="text-2xl font-bold text-gray-800">Data Ingestion</h2>
                     <p className="text-gray-500">Upload and validate your transaction data</p>
                 </div>
-                <button
-                    onClick={fetchStats}
-                    className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center"
-                >
-                    Refresh Stats
-                </button>
+                {uploadComplete && (
+                    <button
+                        onClick={() => navigate('/clustering')}
+                        className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-xl font-medium shadow-lg shadow-green-900/20 flex items-center space-x-2 transition-all animate-bounce-subtle"
+                    >
+                        <span>Proceed to Analysis</span>
+                        <ArrowRight className="w-5 h-5" />
+                    </button>
+                )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -63,19 +70,19 @@ const UploadPage = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-800">
                             <div className="bg-white/50 p-3 rounded-lg">
                                 <span className="font-semibold block mb-1">customer_code</span>
-                                Unique identifier for the customer (String)
+                                Unique identifier (String)
                             </div>
                             <div className="bg-white/50 p-3 rounded-lg">
                                 <span className="font-semibold block mb-1">transaction_date</span>
-                                Date of purchase (YYYY-MM-DD)
+                                Purchase Date (YYYY-MM-DD)
                             </div>
                             <div className="bg-white/50 p-3 rounded-lg">
-                                <span className="font-semibold block mb-1">amount</span>
-                                Transaction value (Numeric)
+                                <span className="font-semibold block mb-1">amount OR qty/price</span>
+                                Monetary value
                             </div>
                             <div className="bg-white/50 p-3 rounded-lg">
                                 <span className="font-semibold block mb-1">product_category</span>
-                                Category of the item (String)
+                                Item Category (String)
                             </div>
                         </div>
                     </div>
@@ -84,12 +91,15 @@ const UploadPage = () => {
                 {/* Right Column: Data Quality Report */}
                 <div className="lg:col-span-1">
                     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-full">
-                        <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center">
-                            <div className="p-2 bg-green-100 rounded-lg mr-3 text-green-600">
-                                <Database className="w-5 h-5" />
-                            </div>
-                            Data Quality Report
-                        </h3>
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-lg font-bold text-gray-800 flex items-center">
+                                <div className="p-2 bg-green-100 rounded-lg mr-3 text-green-600">
+                                    <Database className="w-5 h-5" />
+                                </div>
+                                Data Quality
+                            </h3>
+                            <button onClick={fetchStats} className="text-xs text-blue-600 hover:text-blue-800 font-medium">Refresh</button>
+                        </div>
 
                         {loading ? (
                             <div className="animate-pulse space-y-4">

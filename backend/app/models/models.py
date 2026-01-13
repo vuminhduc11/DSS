@@ -18,6 +18,7 @@ class Transaction(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     customer_id = Column(Integer, ForeignKey("customers.id"))
+    transaction_code = Column(String, index=True, nullable=True)
     transaction_date = Column(DateTime)
     amount = Column(Float)
     product_category = Column(String, nullable=True)
@@ -45,3 +46,19 @@ class CustomerCluster(Base):
     cluster_label = Column(Integer)
     
     cluster_result = relationship("ClusterResult", back_populates="customer_clusters")
+
+class CustomerRLFM(Base):
+    __tablename__ = "customer_rlfm"
+
+    id = Column(Integer, primary_key=True, index=True)
+    customer_id = Column(Integer, ForeignKey("customers.id"))
+    
+    recency = Column(Float)
+    frequency = Column(Float)
+    monetary = Column(Float)
+    length = Column(Float)
+    variety = Column(Float)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    customer = relationship("Customer")

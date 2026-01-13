@@ -2,33 +2,69 @@ import axios from 'axios';
 
 const API_URL = 'http://localhost:8000/api/v1';
 
-export const uploadFile = async (file) => {
+export const previewFile = async (file) => {
     const formData = new FormData();
     formData.append('file', file);
-
     try {
-        const response = await axios.post(`${API_URL}/upload`, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
+        const response = await axios.post(`${API_URL}/upload/preview`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
         });
         return response.data;
     } catch (error) {
-        console.error('Error uploading file:', error);
+        console.error('Error previewing file:', error);
         throw error;
     }
 };
 
-export const runClustering = async (algorithm, params, runName) => {
+export const processFile = async (file, mapping) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('mapping', JSON.stringify(mapping));
+
+    try {
+        const response = await axios.post(`${API_URL}/upload/process`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error processing file:', error);
+        throw error;
+    }
+};
+
+export const runClustering = async (algorithm, params, runName, options = {}) => {
     try {
         const response = await axios.post(`${API_URL}/run`, {
             algorithm,
             params,
-            run_name: runName
+            run_name: runName,
+            start_date: options.startDate,
+            end_date: options.endDate,
+            save_result: options.saveResult
         });
         return response.data;
     } catch (error) {
         console.error('Error running clustering:', error);
+        throw error;
+    }
+};
+
+export const getHistory = async () => {
+    try {
+        const response = await axios.get(`${API_URL}/history/`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching history:', error);
+        throw error;
+    }
+};
+
+export const deleteRun = async (runId) => {
+    try {
+        const response = await axios.delete(`${API_URL}/history/${runId}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error deleting run:', error);
         throw error;
     }
 };
@@ -83,6 +119,58 @@ export const getDataQuality = async () => {
     }
 };
 
+export const getDashboardMetrics = async () => {
+    try {
+        const response = await axios.get(`${API_URL}/analytics/dashboard`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching dashboard metrics:', error);
+        throw error;
+    }
+};
+
+
+
+export const processRLFM = async () => {
+    try {
+        const response = await axios.post(`${API_URL}/rlfm/process`);
+        return response.data;
+    } catch (error) {
+        console.error('Error processing RLFM:', error);
+        throw error;
+    }
+};
+
+export const getRLFMData = async (skip = 0, limit = 100) => {
+    try {
+        const response = await axios.get(`${API_URL}/rlfm/data`, { params: { skip, limit } });
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching RLFM data:', error);
+        throw error;
+    }
+};
+
+export const getTransactions = async (skip = 0, limit = 50) => {
+    try {
+        const response = await axios.get(`${API_URL}/transaction`, { params: { skip, limit } });
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching transactions:', error);
+        throw error;
+    }
+};
+
+export const createTransaction = async (transaction) => {
+    try {
+        const response = await axios.post(`${API_URL}/transaction`, transaction);
+        return response.data;
+    } catch (error) {
+        console.error('Error creating transaction:', error);
+        throw error;
+    }
+};
+
 // Auth API
 export const login = async (email, password) => {
     const formData = new FormData();
@@ -121,6 +209,16 @@ export const getMe = async () => {
         return response.data;
     } catch (error) {
         console.error('Fetch user failed:', error);
+        throw error;
+    }
+};
+
+export const updateProfile = async (data) => {
+    try {
+        const response = await axios.put(`${API_URL}/auth/me`, data);
+        return response.data;
+    } catch (error) {
+        console.error('Update profile failed:', error);
         throw error;
     }
 };

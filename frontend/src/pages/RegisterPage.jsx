@@ -52,7 +52,7 @@ const RegisterPage = () => {
                                     value={fullName}
                                     onChange={(e) => setFullName(e.target.value)}
                                     className="pl-10 w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all bg-gray-50 focus:bg-white"
-                                    placeholder="John Doe"
+                                    placeholder="Example"
                                 />
                             </div>
                         </div>

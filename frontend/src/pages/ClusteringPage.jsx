@@ -225,6 +225,23 @@ const ClusteringPage = () => {
                 <div className="lg:col-span-2">
                     {result ? (
                         <div className="space-y-6">
+                            {/* Workflow Actions */}
+                            <div className="flex space-x-4 mb-4">
+                                <a
+                                    href="/strategy"
+                                    className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-xl font-bold shadow-lg shadow-green-900/10 flex items-center justify-center transition-all"
+                                >
+                                    <span>Generate Strategies</span>
+                                    <div className="ml-2 bg-white/20 p-1 rounded">→</div>
+                                </a>
+                                <a
+                                    href="/dashboard"
+                                    className="flex-1 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 px-4 py-3 rounded-xl font-bold shadow-sm flex items-center justify-center transition-all"
+                                >
+                                    <span>View Dashboard</span>
+                                </a>
+                            </div>
+
                             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                                 <h3 className="text-lg font-bold text-gray-800 mb-2 flex items-center">
                                     <div className="p-2 bg-purple-100 rounded-lg mr-3 text-purple-600">

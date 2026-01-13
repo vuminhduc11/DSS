@@ -5,8 +5,10 @@ app = FastAPI(title="Customer Segmentation DSS", version="1.0.0")
 
 # CORS
 origins = [
-    "http://localhost:5173",  # Vite default
+    "http://localhost:5173",
     "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
 ]
 
 app.add_middleware(
@@ -17,7 +19,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from app.api import upload, clustering, analytics, strategy, auth
+from app.api import upload, clustering, analytics, strategy, auth, rlfm
 from app.core.database import engine, Base
 from app.models import models
 from app.models.user import User
@@ -29,6 +31,12 @@ app.include_router(upload.router, prefix="/api/v1", tags=["upload"])
 app.include_router(clustering.router, prefix="/api/v1", tags=["clustering"])
 app.include_router(analytics.router, prefix="/api/v1", tags=["analytics"])
 app.include_router(strategy.router, prefix="/api/v1", tags=["strategy"])
+app.include_router(strategy.router, prefix="/api/v1", tags=["strategy"])
+app.include_router(rlfm.router, prefix="/api/v1/rlfm", tags=["rlfm"])
+from app.api import transaction
+app.include_router(transaction.router, prefix="/api/v1/transaction", tags=["transaction"])
+from app.api import history
+app.include_router(history.router, prefix="/api/v1/history", tags=["history"])
 
 @app.get("/")
 def read_root():

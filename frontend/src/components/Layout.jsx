@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Upload, Settings, PieChart, Menu, Bell, Search, LogOut, User } from 'lucide-react';
+import { LayoutDashboard, Upload, Settings, PieChart, Menu, Bell, Search, LogOut, User, Database, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 
@@ -10,10 +10,9 @@ const Layout = ({ children }) => {
     const { notifications } = useNotification();
 
     const navItems = [
-        { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-        { path: '/upload', label: 'Data Ingestion', icon: Upload },
-        { path: '/clustering', label: 'Clustering Analysis', icon: PieChart },
-        { path: '/strategy', label: 'Strategy & Reports', icon: Settings },
+        { path: '/', label: 'Data Hub', icon: Database },
+        { path: '/analysis', label: 'Analysis Workbench', icon: Settings },
+        { path: '/history', label: 'History & Results', icon: Clock },
     ];
 
     return (
@@ -53,7 +52,7 @@ const Layout = ({ children }) => {
 
                 <div className="p-6 border-t border-slate-800">
                     <div className="bg-slate-800 rounded-xl p-4">
-                        <div className="flex items-center space-x-3 mb-3">
+                        <Link to="/profile" className="flex items-center space-x-3 mb-3 hover:bg-slate-700 p-2 rounded-lg transition-colors cursor-pointer block">
                             <div className="w-10 h-10 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 flex items-center justify-center text-white font-bold shadow-md">
                                 {user?.full_name?.charAt(0) || 'U'}
                             </div>
@@ -61,7 +60,7 @@ const Layout = ({ children }) => {
                                 <p className="text-sm font-medium text-white truncate">{user?.full_name || 'User'}</p>
                                 <p className="text-xs text-slate-400 truncate">{user?.email}</p>
                             </div>
-                        </div>
+                        </Link>
                         <button
                             onClick={logout}
                             className="w-full flex items-center justify-center space-x-2 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-medium text-slate-300 transition-colors"
@@ -93,10 +92,9 @@ const Layout = ({ children }) => {
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter') {
                                         const val = e.target.value.toLowerCase();
-                                        if (val.includes('cluster')) window.location.href = '/clustering';
-                                        else if (val.includes('upload') || val.includes('data')) window.location.href = '/upload';
-                                        else if (val.includes('dash')) window.location.href = '/';
-                                        else if (val.includes('strat')) window.location.href = '/strategy';
+                                        if (val.includes('cluster') || val.includes('analy')) window.location.href = '/analysis';
+                                        else if (val.includes('upload') || val.includes('data')) window.location.href = '/';
+                                        else if (val.includes('hist')) window.location.href = '/history';
                                     }
                                 }}
                             />

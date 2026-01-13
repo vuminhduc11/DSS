@@ -32,12 +32,26 @@ def get_summary_stats(db: Session = Depends(get_db)):
 def get_sales_over_time(db: Session = Depends(get_db)):
     # Aggregate sales by month (simplified)
     # Note: In production, use database specific date truncation
-    results = db.query(
-        func.date_trunc('month', Transaction.transaction_date).label('month'),
-        func.sum(Transaction.amount).label('total')
-    ).group_by('month').order_by('month').all()
-    
-    return [{"date": r.month, "amount": r.total} for r in results]
+    # Aggregate sales by month
+    try:
+        results = db.query(
+            func.date_trunc('month', Transaction.transaction_date).label('month'),
+            func.sum(Transaction.amount).label('total')
+        ).group_by('month').order_by('month').all()
+        return [{"date": r.month.strftime('%Y-%m') if r.month else 'Unknown', "amount": r.total} for r in results]
+    except Exception:
+        db.rollback()
+        results = db.query(Transaction.transaction_date, Transaction.amount).all()
+        
+        if not results:
+            return []
+
+        import pandas as pd
+        df = pd.DataFrame(results, columns=['date', 'amount'])
+        df['month'] = pd.to_datetime(df['date']).dt.to_period('M')
+        monthly_sales = df.groupby('month')['amount'].sum().reset_index()
+        
+        return [{"date": str(r['month']), "amount": r['amount']} for _, r in monthly_sales.iterrows()]
 
 @router.get("/analytics/data-quality")
 def get_data_quality_report(db: Session = Depends(get_db)):
@@ -76,3 +90,84 @@ def get_data_quality_report(db: Session = Depends(get_db)):
             "product_category": missing_categories
         }
     }
+
+from app.services.clustering_service import get_customer_data
+import pandas as pd
+import numpy as np
+
+@router.get("/analytics/dashboard")
+def get_dashboard_metrics(db: Session = Depends(get_db)):
+    try:
+        # 1. Sales Over Time (Monthly)
+        sales_data = []
+        try:
+            # Try database-native aggregation first (PostgreSQL)
+            sales = db.query(
+                func.date_trunc('month', Transaction.transaction_date).label('month'),
+                func.sum(Transaction.amount).label('total')
+            ).group_by('month').order_by('month').all()
+            sales_data = [{"date": r.month.strftime('%Y-%m') if r.month else 'Unknown', "amount": float(r.total or 0)} for r in sales]
+        except Exception:
+            # Fallback to Pandas for SQLite or others
+            db.rollback()
+            sales = db.query(Transaction.transaction_date, Transaction.amount).all()
+            if sales:
+                df_sales = pd.DataFrame(sales, columns=['date', 'amount'])
+                df_sales['month'] = pd.to_datetime(df_sales['date']).dt.to_period('M')
+                monthly_sales = df_sales.groupby('month')['amount'].sum().reset_index()
+                monthly_sales['month'] = monthly_sales['month'].astype(str)
+                sales_data = [{"date": r['month'], "amount": float(r['amount'])} for _, r in monthly_sales.iterrows()]
+
+
+        # 2. Category Share
+        categories = db.query(
+            Transaction.product_category,
+            func.count(Transaction.id).label('count')
+        ).group_by(Transaction.product_category).all()
+        category_data = [{"name": r.product_category or "Uncategorized", "value": r.count} for r in categories]
+
+        # 3. RFM Distribution
+        rfm_distributions = {}
+        try:
+            features_df, _ = get_customer_data(db)
+            if features_df is not None and not features_df.empty:
+                for col in ['recency', 'frequency', 'monetary', 'length']:
+                    if col in features_df.columns:
+                        hist, bin_edges = np.histogram(features_df[col], bins=10)
+                        rfm_distributions[col] = [
+                            {"range": f"{int(bin_edges[i])}-{int(bin_edges[i+1])}", "count": int(count)}
+                            for i, count in enumerate(hist)
+                        ]
+        except Exception as e:
+            print(f"RFM Distribution error: {e}")  # Log for debugging
+
+        # 4. KPI Cards
+        total_customers = db.query(Customer).count()
+        total_revenue = db.query(func.sum(Transaction.amount)).scalar() or 0
+        total_transactions = db.query(Transaction).count()
+        avg_order = float(total_revenue / total_transactions) if total_transactions > 0 else 0
+
+        return {
+            "kpi": {
+                "total_customers": total_customers,
+                "total_revenue": float(total_revenue),
+                "avg_order_value": avg_order
+            },
+            "sales_trend": sales_data,
+            "category_share": category_data,
+            "rfm_dist": rfm_distributions
+        }
+    except Exception as e:
+        print(f"Dashboard error: {e}")
+        # Return safe defaults
+        return {
+            "kpi": {
+                "total_customers": 0,
+                "total_revenue": 0,
+                "avg_order_value": 0
+            },
+            "sales_trend": [],
+            "category_share": [],
+            "rfm_dist": {}
+        }
+

@@ -7,15 +7,29 @@ from typing import Dict, Any
 
 router = APIRouter()
 
+from datetime import date
+from typing import Optional
+
 class ClusteringRequest(BaseModel):
     algorithm: str
     params: Dict[str, Any]
     run_name: str
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    save_result: bool = True
 
 @router.post("/run")
 def trigger_clustering(request: ClusteringRequest, db: Session = Depends(get_db)):
     try:
-        result = run_clustering(request.algorithm, request.params, db, request.run_name)
+        result = run_clustering(
+            request.algorithm, 
+            request.params, 
+            db, 
+            request.run_name,
+            start_date=request.start_date,
+            end_date=request.end_date,
+            save_result=request.save_result
+        )
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
