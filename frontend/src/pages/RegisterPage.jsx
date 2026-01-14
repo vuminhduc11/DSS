@@ -8,6 +8,7 @@ const RegisterPage = () => {
     const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [role, setRole] = useState('staff');
     const [loading, setLoading] = useState(false);
     const { register } = useAuth();
     const { success, error } = useNotification();
@@ -17,7 +18,7 @@ const RegisterPage = () => {
         e.preventDefault();
         setLoading(true);
         try {
-            await register(email, password, fullName);
+            await register(email, password, fullName, role);
             success('Account created successfully! Please sign in.');
             navigate('/login');
         } catch (err) {
@@ -88,6 +89,24 @@ const RegisterPage = () => {
                                     className="pl-10 w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all bg-gray-50 focus:bg-white"
                                     placeholder="••••••••"
                                 />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <User className="h-5 w-5 text-gray-400" />
+                                </div>
+                                <select
+                                    value={role}
+                                    onChange={(e) => setRole(e.target.value)}
+                                    className="pl-10 w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all bg-gray-50 focus:bg-white appearance-none"
+                                >
+                                    <option value="staff">Customer Care Staff</option>
+                                    <option value="retail_system">Retail Data System</option>
+                                    <option value="admin">Administrator</option>
+                                </select>
                             </div>
                         </div>
 

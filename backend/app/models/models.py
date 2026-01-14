@@ -62,3 +62,18 @@ class CustomerRLFM(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     
     customer = relationship("Customer")
+
+class Interaction(Base):
+    __tablename__ = "interactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    customer_id = Column(Integer, ForeignKey("customers.id"))
+    channel = Column(String)  # Hotline, Email, Social, Store, Other
+    interaction_date = Column(DateTime, default=datetime.utcnow)
+    content = Column(String)
+    sentiment = Column(String, nullable=True)  # Positive, Neutral, Negative
+    
+    customer = relationship("Customer", back_populates="interactions")
+
+# Update Customer to include interactions relationship
+Customer.interactions = relationship("Interaction", back_populates="customer")

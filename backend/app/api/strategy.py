@@ -14,9 +14,34 @@ def get_strategy(run_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/strategy/runs/latest")
-def get_latest_run_id(db: Session = Depends(get_db)):
-    run = db.query(ClusterResult).order_by(ClusterResult.created_at.desc()).first()
-    if not run:
-        raise HTTPException(status_code=404, detail="No clustering runs found")
     return {"id": run.id, "name": run.run_name}
+
+@router.get("/strategy/{run_id}/cluster/{cluster_label}/customers")
+def get_cluster_customers(run_id: int, cluster_label: int, db: Session = Depends(get_db)):
+    """Get list of customers in a specific cluster for a specific run"""
+    from app.models.models import Customer, CustomerCluster, Transaction
+    from sqlalchemy import func
+    
+    # Get customers in this cluster
+    customers = db.query(
+        Customer.id,
+        Customer.customer_code,
+        Customer.name,
+        func.sum(Transaction.amount).label('total_spend')
+    ).join(CustomerCluster, Customer.id == CustomerCluster.customer_id)\
+     .outerjoin(Transaction, Customer.id == Transaction.customer_id)\
+     .filter(CustomerCluster.cluster_result_id == run_id)\
+     .filter(CustomerCluster.cluster_label == cluster_label)\
+     .group_by(Customer.id)\
+     .order_by(func.sum(Transaction.amount).desc())\
+     .all()
+     
+    return [
+        {
+            "id": c.id,
+            "code": c.customer_code,
+            "name": c.name or "Unknown",
+            "total_spend": c.total_spend or 0
+        }
+        for c in customers
+    ]

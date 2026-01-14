@@ -8,7 +8,8 @@ from app.models.models import Customer, Transaction, ClusterResult, CustomerClus
 from datetime import datetime
 import json
 
-def get_customer_data(db: Session, start_date: datetime = None, end_date: datetime = None):
+
+def get_customer_data(db: Session, start_date: datetime = None, end_date: datetime = None, limit: int = None):
     # Aggregate transaction data for each customer
     
     query = db.query(
@@ -24,6 +25,10 @@ def get_customer_data(db: Session, start_date: datetime = None, end_date: dateti
         query = query.filter(Transaction.transaction_date >= start_date)
     if end_date:
         query = query.filter(Transaction.transaction_date <= end_date)
+    
+    # Apply limit if specified (for performance on large datasets)
+    if limit:
+        query = query.limit(limit * 10)  # Multiply by 10 to ensure we get enough unique customers
     
     df = pd.read_sql(query.statement, db.bind)
     
@@ -51,6 +56,10 @@ def get_customer_data(db: Session, start_date: datetime = None, end_date: dateti
         aggs['id'] = 'count' # Frequency = count of rows
     
     customer_features = df.groupby('id').agg(aggs)
+    
+    # Apply limit to customer count if specified
+    if limit and len(customer_features) > limit:
+        customer_features = customer_features.head(limit)
     
     # Flatten MultiIndex columns
     # Order matches dictionary key order

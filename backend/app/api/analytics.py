@@ -98,50 +98,60 @@ import numpy as np
 @router.get("/analytics/dashboard")
 def get_dashboard_metrics(db: Session = Depends(get_db)):
     try:
-        # 1. Sales Over Time (Monthly)
+        # 1. Sales Over Time (Monthly) - OPTIMIZED with LIMIT
         sales_data = []
         try:
             # Try database-native aggregation first (PostgreSQL)
             sales = db.query(
                 func.date_trunc('month', Transaction.transaction_date).label('month'),
                 func.sum(Transaction.amount).label('total')
-            ).group_by('month').order_by('month').all()
+            ).group_by('month').order_by('month').limit(24).all()  # Last 24 months max
             sales_data = [{"date": r.month.strftime('%Y-%m') if r.month else 'Unknown', "amount": float(r.total or 0)} for r in sales]
         except Exception:
-            # Fallback to Pandas for SQLite or others
+            # Fallback to Pandas for SQLite - SAMPLE ONLY 10K records
             db.rollback()
-            sales = db.query(Transaction.transaction_date, Transaction.amount).all()
+            # CRITICAL FIX: Limit to recent 10K transactions instead of ALL
+            sales = db.query(Transaction.transaction_date, Transaction.amount)\
+                      .order_by(Transaction.transaction_date.desc())\
+                      .limit(10000)\
+                      .all()
             if sales:
                 df_sales = pd.DataFrame(sales, columns=['date', 'amount'])
                 df_sales['month'] = pd.to_datetime(df_sales['date']).dt.to_period('M')
                 monthly_sales = df_sales.groupby('month')['amount'].sum().reset_index()
                 monthly_sales['month'] = monthly_sales['month'].astype(str)
+                # Sort and keep last 24 months
+                monthly_sales = monthly_sales.tail(24)
                 sales_data = [{"date": r['month'], "amount": float(r['amount'])} for _, r in monthly_sales.iterrows()]
 
 
-        # 2. Category Share
+        # 2. Category Share - LIMIT to top 10 categories
         categories = db.query(
             Transaction.product_category,
             func.count(Transaction.id).label('count')
-        ).group_by(Transaction.product_category).all()
+        ).group_by(Transaction.product_category)\
+         .order_by(func.count(Transaction.id).desc())\
+         .limit(10)\
+         .all()
         category_data = [{"name": r.product_category or "Uncategorized", "value": r.count} for r in categories]
 
-        # 3. RFM Distribution
+        # 3. RFM Distribution - OPTIMIZED: Use sampled data
         rfm_distributions = {}
         try:
-            features_df, _ = get_customer_data(db)
+            # Pass limit parameter to avoid loading all customers
+            features_df, _ = get_customer_data(db, limit=5000)  # Sample 5K customers max
             if features_df is not None and not features_df.empty:
                 for col in ['recency', 'frequency', 'monetary', 'length']:
                     if col in features_df.columns:
-                        hist, bin_edges = np.histogram(features_df[col], bins=10)
+                        hist, bin_edges = np.histogram(features_df[col].dropna(), bins=10)
                         rfm_distributions[col] = [
                             {"range": f"{int(bin_edges[i])}-{int(bin_edges[i+1])}", "count": int(count)}
-                            for i, count in enumerate(hist)
+                            for i, count in enumerate(hist) if count > 0  # Skip empty bins
                         ]
         except Exception as e:
             print(f"RFM Distribution error: {e}")  # Log for debugging
 
-        # 4. KPI Cards
+        # 4. KPI Cards - Fast COUNT queries
         total_customers = db.query(Customer).count()
         total_revenue = db.query(func.sum(Transaction.amount)).scalar() or 0
         total_transactions = db.query(Transaction).count()
@@ -159,6 +169,8 @@ def get_dashboard_metrics(db: Session = Depends(get_db)):
         }
     except Exception as e:
         print(f"Dashboard error: {e}")
+        import traceback
+        traceback.print_exc()  # Full error for debugging
         # Return safe defaults
         return {
             "kpi": {
@@ -170,4 +182,6 @@ def get_dashboard_metrics(db: Session = Depends(get_db)):
             "category_share": [],
             "rfm_dist": {}
         }
+
+
 

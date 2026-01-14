@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Lightbulb, Target, Users, DollarSign, Zap, FileText, Mail, CheckCircle, AlertTriangle, Clock, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
-import { getStrategy, getLatestRun } from '../services/api';
+import { Lightbulb, Target, Users, DollarSign, Zap, FileText, Mail, CheckCircle, AlertTriangle, Clock, TrendingUp, ChevronDown, ChevronUp, X, ExternalLink } from 'lucide-react';
+import { getStrategy, getLatestRun, getClusterCustomers } from '../services/api';
+import { useNavigate } from 'react-router-dom';
+import Layout from '../components/Layout';
 
 const priorityColors = {
     high: 'bg-red-100 text-red-700 border-red-200',
@@ -16,7 +18,8 @@ const priorityLabels = {
     low: 'Thấp'
 };
 
-const StrategyCard = ({ strat }) => {
+
+const StrategyCard = ({ strat, onShowCustomers }) => {
     const [expanded, setExpanded] = useState(false);
 
     return (
@@ -96,6 +99,13 @@ const StrategyCard = ({ strat }) => {
                         </p>
                     </div>
                 )}
+
+                <button
+                    onClick={() => onShowCustomers(strat)}
+                    className="mt-6 w-full py-2 bg-white border border-gray-200 text-blue-600 font-bold rounded-xl hover:bg-blue-50 transition flex items-center justify-center print:hidden"
+                >
+                    <Users className="w-4 h-4 mr-2" /> Xem danh sách khách hàng
+                </button>
             </div>
         </div>
     );
@@ -106,6 +116,13 @@ const StrategyPage = () => {
     const [runInfo, setRunInfo] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+
+    // Modal State
+    const [selectedStrat, setSelectedStrat] = useState(null);
+    const [customers, setCustomers] = useState([]);
+    const [custLoading, setCustLoading] = useState(false);
+
+    const navigate = useNavigate();
 
     useEffect(() => {
         const fetchData = async () => {
@@ -127,6 +144,27 @@ const StrategyPage = () => {
 
     const handleExport = () => {
         window.print();
+    };
+
+    const handleShowCustomers = async (strat) => {
+        setSelectedStrat(strat);
+        setCustLoading(true);
+        try {
+            const data = await getClusterCustomers(runInfo.id, strat.cluster);
+            setCustomers(data);
+        } catch (err) {
+            console.error("Failed to load customers", err);
+        } finally {
+            setCustLoading(false);
+        }
+    };
+
+    const handleCustomerAction = (customerId) => {
+        // Navigate to DataPage -> Interactions tab with customer ID
+        // We'll use state/query params or just local storage to pass the ID if needed
+        // For now, let's assume DataPage reads query param or we just tell user to search
+        // Better: Use React Router state or Context. Simplest: Query Param.
+        navigate('/data?tab=interactions&customerId=' + customerId);
     };
 
     if (loading) return (
@@ -156,77 +194,137 @@ const StrategyPage = () => {
     );
 
     return (
-        <div className="space-y-8 pb-10 print:p-0 print:space-y-4">
-            {/* Header */}
-            <div className="flex justify-between items-start print:hidden">
-                <div className="bg-gradient-to-r from-indigo-600 to-purple-700 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden flex-1 mr-6">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full -mr-16 -mt-16 blur-3xl"></div>
-                    <div className="relative z-10">
-                        <h2 className="text-3xl font-bold mb-2 flex items-center">
-                            <Target className="w-8 h-8 mr-3" />
+        <Layout>
+            <div className="space-y-6 pb-10 print:p-0 print:space-y-4">
+                {/* Header */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
+                    <div>
+                        <h1 className="text-3xl font-bold heading-gradient flex items-center">
+                            <Target className="w-8 h-8 mr-3 text-indigo-600" />
                             Chiến lược & Báo cáo
-                        </h2>
-                        <p className="text-indigo-100 text-lg max-w-2xl">
-                            Đề xuất chăm sóc khách hàng dựa trên phân tích: <span className="font-semibold text-white bg-white/20 px-2 py-1 rounded-lg ml-1">{runInfo?.name}</span>
+                        </h1>
+                        <p className="text-slate-500 mt-1">
+                            Đề xuất chăm sóc khách hàng dựa trên phân tích: <span className="font-semibold text-slate-700">{runInfo?.name}</span>
+                        </p>
+                    </div>
+
+                    <button
+                        onClick={handleExport}
+                        className="btn-secondary-glass px-6 py-3 flex items-center whitespace-nowrap"
+                    >
+                        <FileText className="w-5 h-5 mr-2" />
+                        Xuất báo cáo
+                    </button>
+                </div>
+
+                {/* Print Header */}
+                <div className="hidden print:block mb-8">
+                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Báo cáo Chiến lược Chăm sóc Khách hàng</h1>
+                    <p className="text-gray-500">Ngày tạo: {new Date().toLocaleDateString('vi-VN')}</p>
+                    <p className="text-gray-500">Dựa trên phân tích: {runInfo?.name}</p>
+                </div>
+
+                {/* Summary Stats */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 print:hidden">
+                    <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                        <p className="text-sm text-gray-500">Tổng phân khúc</p>
+                        <p className="text-2xl font-bold text-gray-800">{strategies.length}</p>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                        <p className="text-sm text-gray-500">Tổng khách hàng</p>
+                        <p className="text-2xl font-bold text-blue-600">
+                            {strategies.reduce((acc, s) => acc + (s.customer_count || 0), 0).toLocaleString()}
+                        </p>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                        <p className="text-sm text-gray-500">Ưu tiên cao</p>
+                        <p className="text-2xl font-bold text-red-600">
+                            {strategies.filter(s => s.priority === 'high').length}
+                        </p>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                        <p className="text-sm text-gray-500">Chi tiêu TB cao nhất</p>
+                        <p className="text-2xl font-bold text-green-600">
+                            ${Math.max(...strategies.map(s => s.avg_spend || 0)).toFixed(0)}
                         </p>
                     </div>
                 </div>
 
-                <button
-                    onClick={handleExport}
-                    className="bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 px-6 py-4 rounded-2xl font-bold shadow-sm flex items-center transition-all"
-                >
-                    <FileText className="w-5 h-5 mr-2" />
-                    Xuất báo cáo
-                </button>
-            </div>
-
-            {/* Print Header */}
-            <div className="hidden print:block mb-8">
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">Báo cáo Chiến lược Chăm sóc Khách hàng</h1>
-                <p className="text-gray-500">Ngày tạo: {new Date().toLocaleDateString('vi-VN')}</p>
-                <p className="text-gray-500">Dựa trên phân tích: {runInfo?.name}</p>
-            </div>
-
-            {/* Summary Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 print:hidden">
-                <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                    <p className="text-sm text-gray-500">Tổng phân khúc</p>
-                    <p className="text-2xl font-bold text-gray-800">{strategies.length}</p>
+                {/* Strategy Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print:grid-cols-1 print:gap-4">
+                    {strategies.map((strat, index) => (
+                        <StrategyCard key={index} strat={strat} onShowCustomers={handleShowCustomers} />
+                    ))}
                 </div>
-                <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                    <p className="text-sm text-gray-500">Tổng khách hàng</p>
-                    <p className="text-2xl font-bold text-blue-600">
-                        {strategies.reduce((acc, s) => acc + (s.customer_count || 0), 0).toLocaleString()}
-                    </p>
-                </div>
-                <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                    <p className="text-sm text-gray-500">Ưu tiên cao</p>
-                    <p className="text-2xl font-bold text-red-600">
-                        {strategies.filter(s => s.priority === 'high').length}
-                    </p>
-                </div>
-                <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                    <p className="text-sm text-gray-500">Chi tiêu TB cao nhất</p>
-                    <p className="text-2xl font-bold text-green-600">
-                        ${Math.max(...strategies.map(s => s.avg_spend || 0)).toFixed(0)}
-                    </p>
-                </div>
-            </div>
 
-            {/* Strategy Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print:grid-cols-1 print:gap-4">
-                {strategies.map((strat, index) => (
-                    <StrategyCard key={index} strat={strat} />
-                ))}
-            </div>
+                {/* Print Footer */}
+                <div className="hidden print:block mt-12 pt-8 border-t border-gray-200 text-center text-sm text-gray-400">
+                    Hệ thống Hỗ trợ Ra quyết định - Báo cáo Nội bộ
+                </div>
+                {/* Customer List Modal */}
+                {selectedStrat && (
+                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 print:hidden">
+                        <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[80vh] flex flex-col shadow-2xl">
+                            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                                <div>
+                                    <h3 className="text-xl font-bold text-gray-800">Danh sách khách hàng - Cluster {selectedStrat.cluster}</h3>
+                                    <p className="text-sm text-gray-500">{selectedStrat.segment_name}</p>
+                                </div>
+                                <button onClick={() => setSelectedStrat(null)} className="p-2 hover:bg-gray-100 rounded-full">
+                                    <X className="w-5 h-5 text-gray-500" />
+                                </button>
+                            </div>
 
-            {/* Print Footer */}
-            <div className="hidden print:block mt-12 pt-8 border-t border-gray-200 text-center text-sm text-gray-400">
-                Hệ thống Hỗ trợ Ra quyết định - Báo cáo Nội bộ
+                            <div className="flex-1 overflow-y-auto p-0">
+                                {custLoading ? (
+                                    <div className="flex justify-center items-center h-40">
+                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                    </div>
+                                ) : customers.length === 0 ? (
+                                    <div className="p-8 text-center text-gray-400">Không tìm thấy khách hàng trong phân khúc này.</div>
+                                ) : (
+                                    <table className="w-full text-left border-collapse">
+                                        <thead className="bg-gray-50 sticky top-0">
+                                            <tr>
+                                                <th className="p-4 font-bold text-gray-600 text-sm">ID</th>
+                                                <th className="p-4 font-bold text-gray-600 text-sm">Mã KH</th>
+                                                <th className="p-4 font-bold text-gray-600 text-sm">Tên</th>
+                                                <th className="p-4 font-bold text-gray-600 text-sm text-right">Tổng chi tiêu</th>
+                                                <th className="p-4 font-bold text-gray-600 text-sm text-right">Hành động</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {customers.map(c => (
+                                                <tr key={c.id} className="hover:bg-gray-50/50">
+                                                    <td className="p-4 text-sm text-gray-500">#{c.id}</td>
+                                                    <td className="p-4 font-mono text-sm font-medium">{c.code}</td>
+                                                    <td className="p-4 text-sm font-bold text-gray-800">{c.name}</td>
+                                                    <td className="p-4 text-sm font-medium text-green-600 text-right">${c.total_spend?.toFixed(0)}</td>
+                                                    <td className="p-4 text-right">
+                                                        <button
+                                                            onClick={() => handleCustomerAction(c.code)}
+                                                            className="px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-bold rounded-lg hover:bg-blue-100 transition inline-flex items-center"
+                                                        >
+                                                            Chăm sóc <ExternalLink className="w-3 h-3 ml-1" />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
+                            </div>
+
+                            <div className="p-4 border-t border-gray-100 text-right bg-gray-50 rounded-b-2xl">
+                                <button onClick={() => setSelectedStrat(null)} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-gray-600 font-bold hover:bg-gray-50">
+                                    Đóng
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
-        </div>
+        </Layout>
     );
 };
-
 export default StrategyPage;

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Upload, BarChart2, PieChart, FileText, CheckCircle, ChevronRight, ChevronLeft, Play, Loader, Users, DollarSign, TrendingUp, Zap, AlertTriangle, Calendar, Settings } from 'lucide-react';
 import { previewFile, processFile, runClustering, getDashboardMetrics, getStrategy, getLatestRun } from '../services/api';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell, Legend } from 'recharts';
+import Layout from '../components/Layout';
 
 const STEPS = [
     { id: 1, name: 'Upload Data', icon: Upload, description: 'Tải dữ liệu giao dịch' },
@@ -581,62 +582,96 @@ const WorkflowPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 print:bg-white">
-            <div className="bg-white border-b border-gray-100 py-6 print:hidden">
-                <div className="max-w-4xl mx-auto px-6">
+        <Layout>
+            <div className="space-y-6 pb-10">
+                {/* Header */}
+                <div>
+                    <h1 className="text-3xl font-bold heading-gradient">Workflow Automation</h1>
+                    <p className="text-slate-500 mt-1">End-to-end pipeline from data ingestion to strategic insights</p>
+                </div>
+
+                {/* Progress Steps */}
+                <div className="glass-card p-6">
                     <div className="flex items-center justify-between">
                         {STEPS.map((step, index) => (
                             <React.Fragment key={step.id}>
                                 <button
                                     onClick={() => (completedSteps.includes(step.id - 1) || step.id === 1) && setCurrentStep(step.id)}
                                     disabled={step.id > 1 && !completedSteps.includes(step.id - 1)}
-                                    className={`flex flex-col items-center transition-all ${currentStep === step.id ? 'scale-110' : ''} ${step.id > 1 && !completedSteps.includes(step.id - 1) ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
+                                    className={`flex flex-col items-center transition-all group ${currentStep === step.id ? 'scale-110' : ''} ${step.id > 1 && !completedSteps.includes(step.id - 1) ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:scale-105'}`}
                                 >
-                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 transition-all ${completedSteps.includes(step.id) ? 'bg-green-500 text-white' : currentStep === step.id ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'bg-gray-100 text-gray-400'}`}>
-                                        {completedSteps.includes(step.id) ? <CheckCircle className="w-6 h-6" /> : <step.icon className="w-6 h-6" />}
+                                    <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-2 transition-all shadow-md ${completedSteps.includes(step.id)
+                                            ? 'bg-gradient-to-br from-green-500 to-emerald-600 text-white'
+                                            : currentStep === step.id
+                                                ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white ring-4 ring-blue-200'
+                                                : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200'
+                                        }`}>
+                                        {completedSteps.includes(step.id) ? <CheckCircle className="w-7 h-7" /> : <step.icon className="w-7 h-7" />}
                                     </div>
-                                    <span className={`text-sm font-medium ${currentStep === step.id ? 'text-blue-600' : 'text-gray-500'}`}>{step.name}</span>
+                                    <p className={`text-xs font-bold text-center max-w-[80px] ${currentStep === step.id ? 'text-blue-600' : 'text-slate-600'}`}>
+                                        {step.name}
+                                    </p>
                                 </button>
-                                {index < STEPS.length - 1 && <div className={`flex-1 h-1 mx-4 rounded ${completedSteps.includes(step.id) ? 'bg-green-500' : 'bg-gray-200'}`} />}
+                                {index < STEPS.length - 1 && (
+                                    <div className={`flex-1 h-1 mx-4 rounded-full transition-all ${completedSteps.includes(step.id) ? 'bg-gradient-to-r from-green-500 to-emerald-500' : 'bg-slate-200'}`} />
+                                )}
                             </React.Fragment>
                         ))}
                     </div>
                 </div>
-            </div>
-            <div className="max-w-4xl mx-auto px-6 py-8">
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 min-h-[400px] print:shadow-none print:border-none">
-                    <div className="mb-6 print:hidden">
+
+                {/* Main Content */}
+                <div className="glass-panel p-8 min-h-[500px]">
+                    <div className="mb-6">
                         <div className="flex justify-between items-start">
                             <div>
-                                <h2 className="text-2xl font-bold text-gray-800">{STEPS[currentStep - 1].name}</h2>
-                                <p className="text-gray-500">{STEPS[currentStep - 1].description}</p>
+                                <h2 className="text-2xl font-bold text-slate-800">{STEPS[currentStep - 1].name}</h2>
+                                <p className="text-slate-500 mt-1">{STEPS[currentStep - 1].description}</p>
                             </div>
-                            {/* If we skipped upload, show a hint */}
                             {currentStep === 2 && completedSteps.includes(1) && (
-                                <div className="bg-green-50 text-green-700 px-3 py-1 rounded-lg text-xs font-bold flex items-center">
-                                    <CheckCircle className="w-3 h-3 mr-1" /> Data Available
+                                <div className="bg-green-50 text-green-700 px-4 py-2 rounded-lg text-sm font-bold flex items-center border border-green-200">
+                                    <CheckCircle className="w-4 h-4 mr-2" /> Data Available
                                 </div>
                             )}
                         </div>
                     </div>
                     {renderStep()}
                 </div>
-                <div className="flex justify-between mt-6 print:hidden">
-                    <button onClick={goPrev} disabled={!canGoPrev} className={`flex items-center px-6 py-3 rounded-xl font-medium transition-all ${canGoPrev ? 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>
+
+                {/* Navigation Buttons */}
+                <div className="flex justify-between">
+                    <button
+                        onClick={goPrev}
+                        disabled={!canGoPrev}
+                        className={`flex items-center px-6 py-3 rounded-xl font-medium transition-all ${canGoPrev
+                                ? 'btn-secondary-glass'
+                                : 'bg-slate-100 text-slate-400 cursor-not-allowed opacity-50'
+                            }`}
+                    >
                         <ChevronLeft className="w-5 h-5 mr-1" />Quay lại
                     </button>
                     {currentStep < 4 ? (
-                        <button onClick={goNext} disabled={!canGoNext} className={`flex items-center px-6 py-3 rounded-xl font-medium transition-all ${canGoNext ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-600/20' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
+                        <button
+                            onClick={goNext}
+                            disabled={!canGoNext}
+                            className={`flex items-center px-6 py-3 rounded-xl font-medium transition-all ${canGoNext
+                                    ? 'btn-primary-gradient'
+                                    : 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-50'
+                                }`}
+                        >
                             Tiếp theo<ChevronRight className="w-5 h-5 ml-1" />
                         </button>
                     ) : (
-                        <button onClick={() => window.print()} className="flex items-center px-6 py-3 rounded-xl font-medium bg-green-600 text-white hover:bg-green-700 shadow-lg shadow-green-600/20">
+                        <button
+                            onClick={() => window.print()}
+                            className="flex items-center px-6 py-3 btn-primary-gradient bg-gradient-to-r from-green-600 to-emerald-600"
+                        >
                             <FileText className="w-5 h-5 mr-2" />Xuất báo cáo
                         </button>
                     )}
                 </div>
             </div>
-        </div>
+        </Layout>
     );
 };
 

@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { updateProfile } from '../services/api';
 import { useNotification } from '../context/NotificationContext';
-import { User, Mail, Lock, Save } from 'lucide-react';
+import Layout from '../components/Layout';
+import { User, Mail, Lock, Save, Home } from 'lucide-react';
 
 const ProfilePage = () => {
-    const { user, login } = useAuth(); // We might need to update context user, but for now just update API
+    const navigate = useNavigate();
+    const { user, login } = useAuth();
     const { showNotification } = useNotification();
     const [formData, setFormData] = useState({
         full_name: '',
@@ -38,10 +41,8 @@ const ProfilePage = () => {
                 full_name: formData.full_name,
                 password: formData.password || undefined
             };
-            const updatedUser = await updateProfile(updateData);
+            await updateProfile(updateData);
             showNotification('Profile updated successfully!', 'success');
-            // Ideally update local context user here, but page refresh will also work
-            // Assuming useAuth has a way to refresh user or we just force reload
             window.location.reload();
         } catch (error) {
             showNotification('Failed to update profile', 'error');
@@ -50,96 +51,134 @@ const ProfilePage = () => {
         }
     };
 
+    // Role Badge Color Helper
+    const getRoleBadgeStyle = (role) => {
+        switch (role) {
+            case 'admin': return 'bg-purple-100 text-purple-700 border-purple-200';
+            case 'staff': return 'bg-blue-100 text-blue-700 border-blue-200';
+            case 'retail_system': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+            default: return 'bg-gray-100 text-gray-700 border-gray-200';
+        }
+    };
+
     return (
-        <div className="space-y-6">
-            <div>
-                <h1 className="text-3xl font-bold text-gray-900">User Profile</h1>
-                <p className="text-gray-500 mt-2">Manage your account settings and preferences.</p>
-            </div>
+        <Layout>
+            <div className="max-w-4xl mx-auto">
+                <div className="mb-8">
+                    <h1 className="text-3xl font-bold text-gray-900">Account Settings</h1>
+                    <p className="text-gray-500 mt-2">Manage your personal information and security preferences.</p>
+                </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 max-w-2xl">
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Read-only Email */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                        <div className="relative">
-                            <Mail className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                            <input
-                                type="email"
-                                value={formData.email}
-                                disabled
-                                className="pl-10 w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-500 cursor-not-allowed"
-                            />
-                        </div>
-                        <p className="text-xs text-gray-400 mt-1">Email cannot be changed.</p>
-                    </div>
-
-                    {/* Full Name */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-                        <div className="relative">
-                            <User className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                            <input
-                                type="text"
-                                value={formData.full_name}
-                                onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                                className="pl-10 w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                required
-                            />
-                        </div>
-                    </div>
-
-                    <div className="border-t border-gray-100 pt-6">
-                        <h3 className="text-lg font-medium text-gray-900 mb-4">Change Password</h3>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
-                                <div className="relative">
-                                    <Lock className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                                    <input
-                                        type="password"
-                                        value={formData.password}
-                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                        className="pl-10 w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                        placeholder="Leave blank to keep current"
-                                    />
-                                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {/* Sidebar / Info Card */}
+                    <div className="col-span-1">
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 text-center">
+                            <div className="w-24 h-24 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center text-white text-3xl font-bold shadow-lg mx-auto mb-4">
+                                {user?.full_name?.charAt(0) || 'U'}
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
-                                <div className="relative">
-                                    <Lock className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                                    <input
-                                        type="password"
-                                        value={formData.confirmPassword}
-                                        onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                                        className="pl-10 w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                        placeholder="Confirm new password"
-                                    />
-                                </div>
+                            <h2 className="text-xl font-bold text-gray-800">{user?.full_name || 'User'}</h2>
+                            <p className="text-sm text-gray-500 mb-4">{user?.email}</p>
+
+                            <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${getRoleBadgeStyle(user?.role)}`}>
+                                <span className="uppercase tracking-wider">{user?.role?.replace('_', ' ')}</span>
                             </div>
                         </div>
                     </div>
 
-                    <div className="pt-4 flex justify-end">
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-medium flex items-center space-x-2 transition-all shadow-lg shadow-blue-900/20 disabled:opacity-70"
-                        >
-                            {loading ? (
-                                <span>Saving...</span>
-                            ) : (
-                                <>
-                                    <Save className="w-5 h-5" />
-                                    <span>Save Changes</span>
-                                </>
-                            )}
-                        </button>
+                    {/* Main Form */}
+                    <div className="col-span-2">
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+                            <form onSubmit={handleSubmit} className="space-y-6">
+                                <div className="border-b border-gray-100 pb-6 mb-6">
+                                    <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                                        <User className="w-5 h-5 mr-2 text-blue-600" /> Personal Information
+                                    </h3>
+
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                                            <input
+                                                type="text"
+                                                value={formData.full_name}
+                                                onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                                                className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                                            <div className="relative">
+                                                <Mail className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                                                <input
+                                                    type="email"
+                                                    value={formData.email}
+                                                    disabled
+                                                    className="pl-10 w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-500 cursor-not-allowed"
+                                                />
+                                            </div>
+                                            <p className="text-xs text-gray-400 mt-2 flex items-center">
+                                                <Lock className="w-3 h-3 mr-1" /> Email cannot be changed for security reasons.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                                        <Lock className="w-5 h-5 mr-2 text-blue-600" /> Security
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                                            <input
+                                                type="password"
+                                                value={formData.password}
+                                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                                className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                                placeholder="Leave blank to keep"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
+                                            <input
+                                                type="password"
+                                                value={formData.confirmPassword}
+                                                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                                                className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                                placeholder="Confirm new password"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="pt-4 flex items-center justify-end space-x-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => window.history.back()}
+                                        className="px-6 py-2.5 rounded-xl font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={loading}
+                                        className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-2.5 rounded-xl font-bold hover:shadow-lg hover:translate-y-[-1px] transition-all disabled:opacity-70 flex items-center"
+                                    >
+                                        {loading ? (
+                                            <span className="flex items-center">Saving...</span>
+                                        ) : (
+                                            <>
+                                                <Save className="w-4 h-4 mr-2" /> Save Changes
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
-                </form>
+                </div>
             </div>
-        </div>
+        </Layout>
     );
 };
 

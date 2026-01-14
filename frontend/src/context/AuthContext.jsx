@@ -32,8 +32,8 @@ export const AuthProvider = ({ children }) => {
         return userData;
     };
 
-    const register = async (email, password, fullName) => {
-        await registerApi(email, password, fullName);
+    const register = async (email, password, fullName, role) => {
+        await registerApi(email, password, fullName, role);
         // Auto login after register? Or redirect to login.
         // Let's just return success and let component handle redirect
     };

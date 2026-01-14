@@ -18,8 +18,14 @@ class ClusteringRequest(BaseModel):
     end_date: Optional[date] = None
     save_result: bool = True
 
+from app.api.auth import RoleChecker
+
 @router.post("/run")
-def trigger_clustering(request: ClusteringRequest, db: Session = Depends(get_db)):
+def trigger_clustering(
+    request: ClusteringRequest, 
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(RoleChecker(["admin", "staff"]))
+):
     try:
         result = run_clustering(
             request.algorithm, 

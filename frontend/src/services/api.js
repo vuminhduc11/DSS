@@ -186,12 +186,13 @@ export const login = async (email, password) => {
     }
 };
 
-export const register = async (email, password, fullName) => {
+export const register = async (email, password, fullName, role) => {
     try {
         const response = await axios.post(`${API_URL}/auth/register`, {
             email,
             password,
-            full_name: fullName
+            full_name: fullName,
+            role
         });
         return response.data;
     } catch (error) {
@@ -219,6 +220,37 @@ export const updateProfile = async (data) => {
         return response.data;
     } catch (error) {
         console.error('Update profile failed:', error);
+        throw error;
+    }
+};
+
+// Interaction API
+export const createInteraction = async (interaction) => {
+    try {
+        const response = await axios.post(`${API_URL}/interactions/`, interaction);
+        return response.data;
+    } catch (error) {
+        console.error('Error creating interaction:', error);
+        throw error;
+    }
+};
+
+export const getCustomerInteractions = async (customerId) => {
+    try {
+        const response = await axios.get(`${API_URL}/interactions/customer/${customerId}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching interactions:', error);
+        throw error;
+    }
+};
+
+export const getClusterCustomers = async (runId, clusterLabel) => {
+    try {
+        const response = await axios.get(`${API_URL}/strategy/${runId}/cluster/${clusterLabel}/customers`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching cluster customers:', error);
         throw error;
     }
 };

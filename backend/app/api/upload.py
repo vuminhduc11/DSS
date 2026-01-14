@@ -8,8 +8,13 @@ router = APIRouter()
 from fastapi import Form, Body
 import json
 
+from app.api.auth import RoleChecker
+
 @router.post("/upload/preview")
-async def preview_file(file: UploadFile = File(...)):
+async def preview_file(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(RoleChecker(["admin", "retail_system"]))
+):
     try:
         contents = await file.read()
         result = preview_upload_file(contents, file.filename)
@@ -21,7 +26,8 @@ async def preview_file(file: UploadFile = File(...)):
 async def process_file(
     file: UploadFile = File(...), 
     mapping: str = Form(...), # JSON string
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(RoleChecker(["admin", "retail_system"]))
 ):
     try:
         contents = await file.read()

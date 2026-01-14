@@ -4,15 +4,17 @@ import WorkflowPage from './pages/WorkflowPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
+import DashboardPage from './pages/DashboardPage';
+import StrategyPage from './pages/StrategyPage';
 import RLFMPage from './pages/RLFMPage';
-import DataManagementPage from './pages/DataManagementPage'; // Keeping for reference or sub-routes
+// DataManagementPage consolidated
 import DataPage from './pages/DataPage';
 import AnalysisPage from './pages/AnalysisPage';
 import HistoryPage from './pages/HistoryPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 
-const ProtectedRoute = ({ children }) => {
+const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -25,6 +27,13 @@ const ProtectedRoute = ({ children }) => {
 
   if (!user) {
     return <Navigate to="/login" />;
+  }
+
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    // If user is restricted, redirect to home (DataPage) which handles its own visibility
+    // or stay on home if already there.
+    // For retail_system trying to access /analysis, redirect to /
+    return <Navigate to="/" />;
   }
 
   return children;
@@ -45,12 +54,12 @@ function App() {
               </ProtectedRoute>
             } />
             <Route path="/analysis" element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['admin', 'staff']}>
                 <AnalysisPage />
               </ProtectedRoute>
             } />
             <Route path="/workflow" element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['admin']}>
                 <WorkflowPage />
               </ProtectedRoute>
             } />
@@ -60,23 +69,27 @@ function App() {
               </ProtectedRoute>
             } />
             <Route path="/rlfm" element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['admin']}>
                 <RLFMPage />
               </ProtectedRoute>
             } />
 
-            {/* Redirect old routes to main workflow */}
-            <Route path="/dashboard" element={<Navigate to="/" />} />
-            <Route path="/upload" element={<Navigate to="/" />} />
-            <Route path="/clustering" element={<Navigate to="/" />} />
-            <Route path="/strategy" element={<Navigate to="/" />} />
-            <Route path="/data" element={
+            {/* Restored Routes */}
+            <Route path="/dashboard" element={
               <ProtectedRoute>
-                <DataManagementPage />
+                <DashboardPage />
               </ProtectedRoute>
             } />
+            <Route path="/strategy" element={
+              <ProtectedRoute allowedRoles={['admin', 'staff']}>
+                <StrategyPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/upload" element={<Navigate to="/" />} />
+            <Route path="/clustering" element={<Navigate to="/" />} />
+            {/* DataManagementPage Removed - Consolidated into DataPage */}
             <Route path="/history" element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['admin', 'staff']}>
                 <HistoryPage />
               </ProtectedRoute>
             } />

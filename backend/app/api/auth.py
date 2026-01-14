@@ -16,6 +16,7 @@ class UserCreate(BaseModel):
     email: str
     password: str
     full_name: str
+    role: str = "staff"  # Default to staff if not provided
 
 class Token(BaseModel):
     access_token: str
@@ -30,6 +31,7 @@ class UserResponse(BaseModel):
     id: int
     email: str
     full_name: str
+    role: str
     
     class Config:
         orm_mode = True
@@ -44,7 +46,8 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     new_user = User(
         email=user.email,
         hashed_password=hashed_password,
-        full_name=user.full_name
+        full_name=user.full_name,
+        role=user.role
     )
     db.add(new_user)
     db.commit()
@@ -100,3 +103,15 @@ def update_user_me(user_update: UserUpdate, current_user: User = Depends(get_cur
     db.commit()
     db.refresh(current_user)
     return current_user
+
+class RoleChecker:
+    def __init__(self, allowed_roles: list[str]):
+        self.allowed_roles = allowed_roles
+
+    def __call__(self, user: User = Depends(get_current_user)):
+        if user.role not in self.allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, 
+                detail=f"Operation not permitted. Required roles: {self.allowed_roles}"
+            )
+        return user

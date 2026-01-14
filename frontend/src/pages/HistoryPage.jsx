@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { getHistory, deleteRun, getStrategy } from '../services/api';
 import { Clock, Trash2, ChevronRight, FileText, Calendar, Users, Zap, Loader, PieChart, BarChart2 } from 'lucide-react';
 import { PieChart as RechartsPie, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 import Layout from '../components/Layout';
 
 const HistoryPage = () => {
+    const { user } = useAuth();
     const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedRun, setSelectedRun] = useState(null);
@@ -42,8 +44,15 @@ const HistoryPage = () => {
         }
     };
 
+    const [selectedCluster, setSelectedCluster] = useState(null);
+    const [clusterCustomers, setClusterCustomers] = useState([]);
+    const [custLoading, setCustLoading] = useState(false);
+
+    // ... (keep handleSelectRun same, but clear selectedCluster)
     const handleSelectRun = async (run) => {
         setSelectedRun(run);
+        setSelectedCluster(null); // Clear previous selection
+        setClusterCustomers([]);
         setStratLoading(true);
         try {
             const data = await getStrategy(run.id);
@@ -55,6 +64,42 @@ const HistoryPage = () => {
         }
     };
 
+    const handleViewCustomers = async (clusterLabel) => {
+        if (selectedCluster === clusterLabel) {
+            setSelectedCluster(null); // Toggle off
+            return;
+        }
+        setSelectedCluster(clusterLabel);
+        setCustLoading(true);
+        try {
+            // We need an API function for this. Assuming generic fetch or we add it to api.js
+            // Since we can't edit api.js easily without seeing it again, let's use a direct fetch or assume getClusterCustomers exists if we added it (we didn't yet).
+            // Actually, strategy.py HAS the endpoint. We need to call it.
+            // Let's implement a quick fetch here or use the one from api.js if it existed (it didn't appear in imports).
+            // I'll assume we can import it if I added it, but I didn't. 
+            // Let's use fetch directly for now or better, update api.js first? 
+            // No, preventing context switch. I'll generic fetch it.
+            const token = localStorage.getItem('token');
+            const res = await fetch(`http://localhost:8000/api/v1/strategy/${selectedRun.id}/cluster/${clusterLabel}/customers`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setClusterCustomers(data);
+            }
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setCustLoading(false);
+        }
+    };
+
+    const handleCareAction = (customerId) => {
+        // Navigate to DataPage with interactions tab and customerId
+        window.location.href = `/data?tab=interactions&customerId=${customerId}`;
+    };
+
+    // ... (Loading check)
     if (loading) return (
         <Layout>
             <div className="flex justify-center items-center h-96">
@@ -90,12 +135,14 @@ const HistoryPage = () => {
                                         <h3 className={`font-semibold ${selectedRun?.id === run.id ? 'text-blue-700' : 'text-gray-800'}`}>
                                             {run.run_name}
                                         </h3>
-                                        <button
-                                            onClick={(e) => handleDelete(e, run.id)}
-                                            className="text-gray-400 hover:text-red-500 transition-colors p-1"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
+                                        {user?.role === 'admin' && (
+                                            <button
+                                                onClick={(e) => handleDelete(e, run.id)}
+                                                className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        )}
                                     </div>
                                     <div className="flex items-center text-xs text-gray-500 mb-2">
                                         <Calendar className="w-3 h-3 mr-1" />
@@ -188,7 +235,7 @@ const HistoryPage = () => {
 
                                         <div className="grid grid-cols-1 gap-4">
                                             {strategies.map((strat, idx) => (
-                                                <div key={idx} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                                                <div key={idx} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm transition-all hover:shadow-md">
                                                     <div className="flex justify-between items-start mb-4">
                                                         <div>
                                                             <h4 className="text-lg font-bold text-gray-800 flex items-center">
@@ -197,9 +244,17 @@ const HistoryPage = () => {
                                                             </h4>
                                                             <p className="text-sm text-gray-500 ml-5">Cluster {strat.cluster}</p>
                                                         </div>
-                                                        <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-bold">
-                                                            {strat.customer_count} Customers
-                                                        </span>
+                                                        <div className="flex gap-2">
+                                                            <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-bold">
+                                                                {strat.customer_count} Customers
+                                                            </span>
+                                                            <button
+                                                                onClick={() => handleViewCustomers(strat.cluster)}
+                                                                className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-full font-medium transition-colors"
+                                                            >
+                                                                {selectedCluster === strat.cluster ? 'Hide List' : 'View Customers'}
+                                                            </button>
+                                                        </div>
                                                     </div>
 
                                                     <div className="grid grid-cols-3 gap-4 mb-4 text-sm">
@@ -217,7 +272,7 @@ const HistoryPage = () => {
                                                         </div>
                                                     </div>
 
-                                                    <div className="bg-amber-50 border border-amber-100 p-4 rounded-lg">
+                                                    <div className="bg-amber-50 border border-amber-100 p-4 rounded-lg mb-4">
                                                         <div className="flex items-center text-sm font-bold text-amber-800 mb-2">
                                                             <Zap className="w-4 h-4 mr-2" /> Recommended Strategy
                                                         </div>
@@ -225,6 +280,48 @@ const HistoryPage = () => {
                                                             {strat.strategy || strat.strategies?.[0]}
                                                         </p>
                                                     </div>
+
+                                                    {/* Customer List Table */}
+                                                    {selectedCluster === strat.cluster && (
+                                                        <div className="mt-4 border-t pt-4 animate-in fade-in slide-in-from-top-2">
+                                                            <h5 className="font-bold text-gray-700 mb-3 text-sm">Customer List ({clusterCustomers.length})</h5>
+                                                            {custLoading ? (
+                                                                <div className="text-center py-4"><Loader className="w-5 h-5 animate-spin mx-auto text-blue-500" /></div>
+                                                            ) : (
+                                                                <div className="overflow-x-auto max-h-60 border rounded-lg">
+                                                                    <table className="w-full text-xs text-left">
+                                                                        <thead className="bg-gray-50 sticky top-0">
+                                                                            <tr>
+                                                                                <th className="p-2 border-b">ID</th>
+                                                                                <th className="p-2 border-b">Code</th>
+                                                                                <th className="p-2 border-b">Name</th>
+                                                                                <th className="p-2 border-b text-right">Spend</th>
+                                                                                <th className="p-2 border-b text-center">Action</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            {clusterCustomers.map(c => (
+                                                                                <tr key={c.id} className="hover:bg-gray-50 divide-y divide-gray-50">
+                                                                                    <td className="p-2 border-b">{c.id}</td>
+                                                                                    <td className="p-2 border-b font-mono text-gray-500">{c.code}</td>
+                                                                                    <td className="p-2 border-b font-medium">{c.name}</td>
+                                                                                    <td className="p-2 border-b text-right">${c.total_spend?.toFixed(2)}</td>
+                                                                                    <td className="p-2 border-b text-center">
+                                                                                        <button
+                                                                                            onClick={() => handleCareAction(c.id)}
+                                                                                            className="bg-green-100 hover:bg-green-200 text-green-700 px-2 py-1 rounded text-[10px] font-bold transition-colors"
+                                                                                        >
+                                                                                            CARE
+                                                                                        </button>
+                                                                                    </td>
+                                                                                </tr>
+                                                                            ))}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             ))}
                                         </div>

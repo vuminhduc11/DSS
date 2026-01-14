@@ -11,7 +11,7 @@ router = APIRouter()
 class HistoryItem(BaseModel):
     id: int
     run_name: str
-    algorithm: str
+    algorithm: Optional[str] = "Unknown"
     created_at: datetime
     parameters: Optional[dict] = None
     customer_count: int
@@ -40,8 +40,14 @@ def get_history(db: Session = Depends(get_db)):
     
     return results
 
+from app.api.auth import RoleChecker
+
 @router.delete("/{run_id}")
-def delete_run(run_id: int, db: Session = Depends(get_db)):
+def delete_run(
+    run_id: int, 
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(RoleChecker(["admin"]))
+):
     run = db.query(ClusterResult).filter(ClusterResult.id == run_id).first()
     if not run:
         raise HTTPException(status_code=404, detail="Run not found")
